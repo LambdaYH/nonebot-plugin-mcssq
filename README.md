@@ -36,6 +36,7 @@
 
 1. 安装依赖
 ```
+mcstatus
 nonebot-plugin-imageutils
 ```
 
