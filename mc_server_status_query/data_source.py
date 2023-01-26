@@ -78,3 +78,17 @@ def get_server_list(group_id: int, user_id: int):
             + (f":{server[2]}" if server[2] else "")
         )
     return MessageSegment.image(draw_list("\n".join(server_text_list)))
+
+
+def get_add_info(name: str, host: str, sv_type: str):
+    return MessageSegment.image(
+        draw_list(
+            f"""
+        §bMC服务器添加成功
+        §7名称: §f{name}
+        §7地址: §f{host}
+        §7类型: §f{"Java版" if sv_type == "je" else "基岩版"}
+        §6可发送 查询mcs {name} 查询服务器状态
+    """.strip()
+        )
+    )

@@ -25,6 +25,8 @@
 <details open>
 <summary>效果图</summary>
 
+![add](https://image.cinte.cc/i/2023/01/26/63d1f8c62affc.png)
+
 ![list](https://image.cinte.cc/i/2023/01/25/63d0d114d2dfd.png)
 
 ![je](https://image.cinte.cc/i/2023/01/25/63d0d1787b5fe.png)

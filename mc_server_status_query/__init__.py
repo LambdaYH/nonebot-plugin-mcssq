@@ -14,6 +14,7 @@ from .data_source import (
     add_server,
     del_server,
     get_server_list,
+    get_add_info,
 )
 
 require("nonebot_plugin_imageutils")
@@ -153,7 +154,7 @@ async def _(event: MessageEvent, args: Message = CommandArg()):
         sv_type=params[2],
     ):
         await add_mc.finish(
-            f"MC服务器添加成功：\n名称：{params[0]}\n地址：{params[1]}\n类型：{params[2]}\n可发送[查询mcs {params[0]}]查询服务器状态"
+            get_add_info(name=params[0], host=params[1], sv_type=params[2])
         )
     await add_mc.send(f"名称为 {params[0]} 的MC服务器已存在，请更换服务器名")
 
