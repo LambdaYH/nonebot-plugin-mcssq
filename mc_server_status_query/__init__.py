@@ -174,7 +174,7 @@ async def _(event: MessageEvent, args: Message = CommandArg()):
 @mc_list.handle()
 async def _(event: MessageEvent):
     group_id, user_id = (
-        event.group_id if isinstance(event, GroupMessageEvent) else 0,
-        event.user_id if not isinstance(event, GroupMessageEvent) else 0,
+        event.group_id if isinstance(event, GroupMessageEvent) else None,
+        event.user_id,
     )
     await mc_list.send(get_server_list(group_id=group_id, user_id=user_id))
