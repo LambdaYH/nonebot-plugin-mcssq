@@ -8,7 +8,7 @@ from nonebot.adapters.onebot.v11 import MessageSegment
 from .model import ServerDB
 from .draw import draw_bedrock, draw_java, draw_error, draw_list
 
-data_path = Path() / "data" / "mcserver"
+data_path = Path() / "data" / "mcssq"
 db_file = data_path / "mcserver.db"
 
 data_path.mkdir(exist_ok=True, parents=True)
@@ -65,7 +65,7 @@ async def server_status(host: str, port: Optional[int], sv_type: str):
         return MessageSegment.image(draw_error(e=e, sv_type=sv_type))
 
 
-def get_mc_list(group_id: int, user_id: int):
+def get_server_list(group_id: int, user_id: int):
     servers = mcserverdb.get_server_list(group_id=group_id, user_id=user_id)
     if not servers:
         return MessageSegment.image(draw_list("空"))

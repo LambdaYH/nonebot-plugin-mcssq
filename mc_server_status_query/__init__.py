@@ -13,7 +13,7 @@ from .data_source import (
     server_status,
     add_server,
     del_server,
-    get_mc_list,
+    get_server_list,
 )
 
 require("nonebot_plugin_imageutils")
@@ -93,13 +93,13 @@ __plugin_version__ = 0.1
 __plugin_author__ = "migang"
 __plugin_type__ = ("一些工具",)
 __plugin_settings__ = {
-    "cmd": [],
+    "cmd": ["MC服务器状态查询", "mc服务器状态查询"],
 }
 
 query = on_command("查询mcs", aliases={"qmcs"}, priority=5)
 add_mc = on_command("添加mcs", aliases={"addmcs"}, priority=5)
 del_mc = on_command("删除mcs", aliases={"delmcs"}, priority=5)
-mc_list = on_command("mcslist", aliases={"mc服务器列表"}, priority=5)
+mc_list = on_command("mcslist", aliases={"mc服务器列表", "MC服务器列表"}, priority=5)
 
 
 @query.handle()
@@ -110,7 +110,7 @@ async def _(event: MessageEvent, args: Message = CommandArg()):
         if len(params) != 1:
             await query.finish("查询参数错误，请按照[查询mcs ip:<port> je/be]重新发送")
         group_id, user_id = (
-            event.group_id if isinstance(event, GroupMessageEvent) else 0,
+            event.group_id if isinstance(event, GroupMessageEvent) else None,
             event.user_id,
         )
         if host_port := get_server_info(
@@ -142,7 +142,7 @@ async def _(event: MessageEvent, args: Message = CommandArg()):
     if len(params) != 3:
         await add_mc.finish(f"参数错误，请按照[添加mcs 服务器名 ip:<port> je/be]重新发送")
     group_id, user_id = (
-        event.group_id if isinstance(event, GroupMessageEvent) else 0,
+        event.group_id if isinstance(event, GroupMessageEvent) else None,
         event.user_id,
     )
     if add_server(
@@ -155,25 +155,25 @@ async def _(event: MessageEvent, args: Message = CommandArg()):
         await add_mc.finish(
             f"MC服务器添加成功：\n名称：{params[0]}\n地址：{params[1]}\n类型：{params[2]}\n可发送[查询mcs {params[0]}]查询服务器状态"
         )
-    await add_mc.send(f"名称为 {params[0]} 的服务器已存在，请更换服务器名")
+    await add_mc.send(f"名称为 {params[0]} 的MC服务器已存在，请更换服务器名")
 
 
 @del_mc.handle()
 async def _(event: MessageEvent, args: Message = CommandArg()):
     name = args.extract_plain_text().strip()
     group_id, user_id = (
-        event.group_id if isinstance(event, GroupMessageEvent) else 0,
+        event.group_id if isinstance(event, GroupMessageEvent) else None,
         event.user_id,
     )
     if del_server(group_id=group_id, user_id=user_id, name=name):
         await del_mc.finish(f"MC服务器 {name} 已删除")
-    await del_mc.send(f"名称为 {name} 的服务器不存在")
+    await del_mc.send(f"名称为 {name} 的MC服务器不存在")
 
 
 @mc_list.handle()
 async def _(event: MessageEvent):
     group_id, user_id = (
         event.group_id if isinstance(event, GroupMessageEvent) else 0,
-        event.user_id,
+        event.user_id if not isinstance(event, GroupMessageEvent) else 0,
     )
-    await mc_list.send(get_mc_list(group_id=group_id, user_id=user_id))
+    await mc_list.send(get_server_list(group_id=group_id, user_id=user_id))

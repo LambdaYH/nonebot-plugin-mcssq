@@ -11,16 +11,20 @@ class ServerDB:
     def _create_table(self):
         try:
             self._connect().execute(
-                """CREATE TABLE IF NOT EXISTS McServerDB
-                          (group_id  INTEGER          ,
-                           user_id   INTEGER          ,
+                """CREATE TABLE IF NOT EXISTS McServerDBGroup
+                          (id        INTEGER          ,
                            name      TEXT             ,
                            host      TEXT     NOT NULL,
                            port      INTEGER          ,
                            sv_type   TEXT     NOT NULL);"""
             )
             self._connect().execute(
-                "CREATE INDEX IF NOT EXISTS group_user_idx ON McServerDB (group_id, user_id);"
+                """CREATE TABLE IF NOT EXISTS McServerDBPrivate
+                          (id        INTEGER          ,
+                           name      TEXT             ,
+                           host      TEXT     NOT NULL,
+                           port      INTEGER          ,
+                           sv_type   TEXT     NOT NULL);"""
             )
         except Exception as e:
             raise Exception(f"创建表发生错误: {e}")
@@ -42,37 +46,37 @@ class ServerDB:
         """
         conn = self._connect()
         conn.execute(
-            "INSERT INTO McServerDB (group_id, user_id, name, host, port, sv_type) \
-                            VALUES (?,?,?,?,?,?)",
-            (group_id, user_id, name, host, port, sv_type),
+            f"INSERT INTO McServerDB{'Group' if group_id else 'Private'} (id, name, host, port, sv_type) \
+                            VALUES (?,?,?,?,?)",
+            (group_id if group_id else user_id, name, host, port, sv_type),
         )
         conn.commit()
 
-    def del_server(self, group_id: int, user_id: int, name: str):
+    def del_server(self, group_id: Optional[int], user_id: Optional[int], name: str):
         """
         删除服务器
         """
         conn = self._connect()
         conn.execute(
-            f"DELETE FROM McServerDB WHERE group_id=? AND user_id=? AND name=?",
-            (group_id, user_id, name),
+            f"DELETE FROM McServerDB{'Group' if group_id else 'Private'} WHERE id=? AND name=?",
+            (group_id if group_id else user_id, name),
         )
         conn.commit()
 
-    def get_server(self, group_id: int, user_id: int, name: str):
+    def get_server(self, group_id: Optional[int], user_id: Optional[int], name: str):
         """
         获取以name命名的服务器
         """
         return (
             self._connect()
             .execute(
-                f"SELECT host, port, sv_type FROM McServerDB WHERE group_id=? AND user_id=? AND name=?",
-                (group_id, user_id, name),
+                f"SELECT host, port, sv_type FROM McServerDB{'Group' if group_id else 'Private'} WHERE id=? AND name=?",
+                (group_id if group_id else user_id, name),
             )
             .fetchone()
         )
 
-    def get_server_list(self, group_id: int, user_id: int):
+    def get_server_list(self, group_id: Optional[int], user_id: Optional[int]):
         """
         获取服务器列表
         返回name host port sv_type
@@ -80,8 +84,8 @@ class ServerDB:
         return (
             self._connect()
             .execute(
-                f"SELECT name, host, port, sv_type FROM McServerDB WHERE group_id=? AND user_id=?",
-                (group_id, user_id),
+                f"SELECT name, host, port, sv_type FROM McServerDB{'Group' if group_id else 'Private'} WHERE id=?",
+                (group_id if group_id else user_id,),
             )
             .fetchall()
         )
