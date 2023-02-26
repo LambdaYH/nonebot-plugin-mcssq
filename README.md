@@ -4,11 +4,13 @@
 
 <div align="center">
 
-# NoneBot-Plugin-MCSSQ
+# NoneBot-Plugin-MCQ
 
-✨ Minecraft 服务器状态查询 ✨
+✨ Minecraft 查询 ✨
 
 绘图与信息显示基于[nonebot-plugin-picmcstat](https://github.com/lgc2333/nonebot-plugin-picmcstat)
+
+从[Meetwq/mybot](https://github.com/MeetWq/mybot)缝合了头像等信息查询
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 ![](https://img.shields.io/badge/nonebot2-v2.0.0+-green)
@@ -40,12 +42,15 @@
 ```
 mcstatus
 nonebot-plugin-imageutils
+nontbot-plugin_datastore
 ```
 
-2. 将整个`mc_server_status_query`文件夹放入`nonebot2`插件路径
+1. 将整个`mc_query`文件夹放入`nonebot2`插件路径
 
 ## 💡 鸣谢
 
 ### [nonebot-plugin-picmcstat](https://github.com/lgc2333/nonebot-plugin-picmcstat)
 
 ### [nonebot-plugin-imageutils](https://github.com/noneplugin/nonebot-plugin-imageutils)
+
+### [MeetWq/mybot](https://github.com/MeetWq/mybot)

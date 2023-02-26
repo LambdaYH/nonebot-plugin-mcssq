@@ -1,17 +1,20 @@
+import re
 import base64
-import socket
 import random
+import socket
 from io import BytesIO
 from pathlib import Path
 from asyncio.exceptions import TimeoutError
-from typing import Literal, Optional, Union, List
-from string import ascii_letters, digits, punctuation
-from PIL.Image import Resampling
+from string import digits, punctuation, ascii_letters
+from typing import List, Union, Literal, Optional, TypedDict
 
-from mcstatus.bedrock_status import BedrockStatusResponse
+from PIL.Image import Resampling
 from mcstatus.pinger import PingResponse
-from nonebot_plugin_imageutils import BuildImage, Text2Image
 from nonebot_plugin_imageutils.fonts import add_font
+from mcstatus.bedrock_status import BedrockStatusResponse
+from nonebot_plugin_imageutils import BuildImage, Text2Image
+
+ServerType = Literal["je", "be"]
 
 CODE_COLOR = {
     "0": "#000000",
@@ -53,7 +56,7 @@ STROKE_COLOR = {
     "g": "#373501",
 }
 
-STRING_COLOR = {
+STRING_CODE = {
     "black": "0",
     "dark_blue": "1",
     "dark_green": "2",
@@ -70,6 +73,10 @@ STRING_COLOR = {
     "light_purple": "d",
     "yellow": "e",
     "white": "f",
+    "bold": "l",
+    "italic": "o",
+    "underlined": "n",
+    "strikethrough": "m",
 }
 
 STYLE_BBCODE = {
@@ -81,9 +88,9 @@ STYLE_BBCODE = {
 
 GAME_MODE_MAP = {"Survival": "生存", "Creative": "创造", "Adventure": "冒险"}
 
-RANDOM_CHAR_TEMPLATE = ascii_letters + digits + punctuation
+FORMAT_CODE_REGEX = r"§[0-9abcdefgklmnor]"
 
-ServerType = Literal["je", "be"]
+RANDOM_CHAR_TEMPLATE = ascii_letters + digits + punctuation
 
 MARGIN = 32
 MIN_WIDTH = 512
@@ -133,6 +140,20 @@ def random_char(length: int) -> str:
     return "".join(random.choices(RANDOM_CHAR_TEMPLATE, k=length))
 
 
+def strip_lines(txt: str) -> str:
+    head_space_regex = re.compile(rf"^(({FORMAT_CODE_REGEX})+)\s+", re.M)
+    tail_space_regex = re.compile(rf"\s+(({FORMAT_CODE_REGEX})+)$", re.M)
+
+    txt = "\n".join([x.strip() for x in txt.splitlines()])
+    txt = re.sub(head_space_regex, r"\1", txt)
+    txt = re.sub(tail_space_regex, r"\1", txt)
+    return txt
+
+
+def replace_format_code(txt: str, new_str: str = "") -> str:
+    return re.sub(FORMAT_CODE_REGEX, new_str, txt)
+
+
 def format_code_to_bbcode(text: str) -> str:
     if not text:
         return text
@@ -171,20 +192,24 @@ def format_code_to_bbcode(text: str) -> str:
 
     parsed.extend(color_tails)
     parsed.extend(format_tails)
-    return "\n".join([x.strip() for x in "".join(parsed).splitlines()])
+    return "".join(parsed)
 
 
-def format_list(sample: List[str], items_per_line=2, line_start_spaces=10, list_gap=2):
+def format_list(
+    sample: List[str], items_per_line=2, line_start_spaces=10, list_gap=2
+) -> str:
+    sample = [x for x in sample if x]
     if not sample:
         return ""
 
-    max_width = max([len(x) for x in sample]) + list_gap
+    max_width = max([len(replace_format_code(x)) for x in sample]) + list_gap
 
     line_added = 0
     tmp = []
     for name in sample:
         if line_added < items_per_line:
-            name = name.ljust(max_width)
+            code_len = len(name) - len(replace_format_code(name))
+            name = name.ljust(max_width + code_len)
 
         tmp.append(name)
         line_added += 1
@@ -194,11 +219,60 @@ def format_list(sample: List[str], items_per_line=2, line_start_spaces=10, list_
             tmp.append(" " * line_start_spaces)
             line_added = 0
 
-    return "".join(tmp)
+    return "".join(tmp).strip()
 
 
-def get_header_by_sv_type(sv_type: ServerType) -> str:
-    return JE_HEADER if sv_type == "je" else BE_HEADER
+class RawTextDictType(TypedDict):
+    text: str
+    color: Optional[str]
+    bold: Optional[bool]
+    italic: Optional[bool]
+    underlined: Optional[bool]
+    strikethrough: Optional[bool]
+    obfuscated: Optional[bool]  # &k random
+    interpret: Optional[bool]  # `text` need parse
+    extra: List["RawTextType"]
+
+
+RawTextType = Union[str, RawTextDictType, List[RawTextDictType]]
+
+
+def get_format_code_by_dict(json: RawTextDictType) -> list:
+    codes = []
+    if color := json.get("color"):
+        codes.append(f"§{STRING_CODE[color]}")
+
+    for k in ["bold", "italic", "underlined", "strikethrough", "obfuscated"]:
+        if json.get(k):  # type: ignore
+            codes.append(f"§{STRING_CODE[k]}")
+    return codes
+
+
+def json_to_format_code(json: RawTextType, interpret: Optional[bool] = None) -> str:
+    if isinstance(json, str):
+        return json
+    if isinstance(json, list):
+        return "§r".join([json_to_format_code(x, interpret) for x in json])
+
+    interpret = interpret if (i := json.get("interpret")) is None else i
+    code = "".join(get_format_code_by_dict(json))
+    texts = []
+    for k, v in json.items():
+        if k == "text":
+            if interpret:
+                try:
+                    v = json_to_format_code(JSON.loads(v), interpret)  # type: ignore
+                except:
+                    pass
+            texts.append(v)
+        if k == "extra":
+            texts.append(json_to_format_code(v, interpret))  # type: ignore
+
+    return f"{code}{''.join(texts)}"
+
+
+def get_header_by_svr_type(svr_type: ServerType) -> str:
+    return JE_HEADER if svr_type == "je" else BE_HEADER
 
 
 def draw_bg(width: int, height: int) -> BuildImage:
@@ -300,7 +374,10 @@ def draw_java(res: PingResponse) -> BytesIO:
 
     players_online = res.players.online
     players_max = res.players.max
-    online_percent = round(players_online / players_max * 100, 2)
+    online_percent = (
+        "{:.2f}".format(players_online / players_max * 100) if players_max else "?.??"
+    )
+    motd = strip_lines(json_to_format_code(res.raw["description"]))  # type: ignore
 
     player_li = ""
     if res.players.sample:
@@ -319,7 +396,7 @@ def draw_java(res: PingResponse) -> BytesIO:
             mod_list = f"§7Mod列表: §f{format_list(tmp)}\n"  # type: ignore
 
     extra_txt = (
-        f"{res.description}§r\n"
+        f"{motd}§r\n"
         f"§7服务端名: §f{res.version.name}\n"
         f"{mod_client}"
         f"§7协议版本: §f{res.version.protocol}\n"
@@ -339,10 +416,15 @@ def draw_bedrock(res: BedrockStatusResponse) -> BytesIO:
         if res.gamemode
         else ""
     )
-    online_percent = round(int(res.players_online) / int(res.players_max) * 100, 2)
+    online_percent = (
+        "{:.2f}".format(int(res.players_online) / int(res.players_max) * 100)
+        if res.players_max
+        else "?.??"
+    )
+    motd = strip_lines(res.motd)
 
     extra_txt = (
-        f"{res.motd}§r\n"
+        f"{motd}§r\n"
         f"§7协议版本: §f{res.version.protocol}\n"
         f"§7游戏版本: §f{res.version.version}\n"
         f"§7在线人数: §f{res.players_online}/{res.players_max} ({online_percent}%)\n"
@@ -364,10 +446,9 @@ def draw_error(e: Exception, sv_type: ServerType) -> BytesIO:
         reason = "出错了！"
         extra = repr(e)
 
-    if extra:
-        extra = format_extra(extra).wrap(MIN_WIDTH - MARGIN * 2)
+    extra_img = format_extra(extra).wrap(MIN_WIDTH - MARGIN * 2) if extra else None
 
-    return build_img(get_header_by_sv_type(sv_type), reason, extra)
+    return build_img(get_header_by_svr_type(sv_type), reason, extra_img)
 
 
 def draw_list(list_text: str) -> BytesIO:
