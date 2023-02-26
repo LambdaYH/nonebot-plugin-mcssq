@@ -37,13 +37,13 @@ async def get_server(
         if group_id:
             server: Optional[McServerGroup] = await session.scalar(
                 statement=select(McServerGroup).where(
-                    McServerGroup.group_id == group_id and McServerGroup.name == name
+                    McServerGroup.group_id == group_id, McServerGroup.name == name
                 )
             )
         else:
             server: Optional[McServerPrivate] = await session.scalar(
                 statement=select(McServerPrivate).where(
-                    McServerPrivate.user_id == user_id and McServerPrivate.name == name
+                    McServerPrivate.user_id == user_id, McServerPrivate.name == name
                 )
             )
         return server
@@ -81,13 +81,13 @@ async def del_server(group_id: Optional[int], user_id: Optional[int], name: str)
         if group_id:
             server: Optional[McServerGroup] = await session.scalar(
                 statement=select(McServerGroup).where(
-                    McServerGroup.group_id == group_id and McServerGroup.name == name
+                    McServerGroup.group_id == group_id, McServerGroup.name == name
                 )
             )
         else:
             server: Optional[McServerPrivate] = await session.scalar(
                 statement=select(McServerPrivate).where(
-                    McServerPrivate.user_id == user_id and McServerPrivate.name == name
+                    McServerPrivate.user_id == user_id, McServerPrivate.name == name
                 )
             )
         await session.delete(server)
